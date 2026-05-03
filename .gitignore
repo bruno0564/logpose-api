@@ -1,0 +1,25 @@
+CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Variables de entorno
+.env
+.env.local
+
+# IDEs
+.idea/
+.vscode/
