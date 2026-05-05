@@ -1,11 +1,23 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.database import engine, Base
-#si no existen las tablas al arrancar  las crea
+from app.routers import body_weight
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Logpose API")
 
-#devuelve ok si la api esta activa
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(body_weight.router)
+
+
 @app.get("/")
 def healthcheck():
     return {"status": "ok"}
