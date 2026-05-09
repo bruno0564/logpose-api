@@ -8,6 +8,12 @@ class BodyWeightCreate(BaseModel):
     note: str | None = None
 
 
+class BodyWeightUpdate(BaseModel):
+    weight: float
+    date: date
+    note: str | None = None
+
+
 class BodyWeightRead(BodyWeightCreate):
     id: int
 

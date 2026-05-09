@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models.body_weight import BodyWeight
-from app.schemas.body_weight import BodyWeightCreate, BodyWeightRead
+from app.schemas.body_weight import BodyWeightCreate, BodyWeightRead, BodyWeightUpdate
 
 router = APIRouter(prefix="/body-weight", tags=["body-weight"])
 
@@ -20,6 +20,19 @@ def create_entry(entry: BodyWeightCreate, db: Session = Depends(get_session)):
     db.commit()
     db.refresh(db_entry)
     return db_entry
+
+
+@router.put("/{entry_id}", response_model=BodyWeightRead)
+def update_entry(entry_id: int, data: BodyWeightUpdate, db: Session = Depends(get_session)):
+    entry = db.get(BodyWeight, entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    entry.weight = data.weight
+    entry.date = data.date
+    entry.note = data.note
+    db.commit()
+    db.refresh(entry)
+    return entry
 
 
 @router.delete("/{entry_id}", status_code=204)
