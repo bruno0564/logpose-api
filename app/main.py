@@ -10,7 +10,7 @@ app = FastAPI(title="Logpose API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:8000", "tauri://localhost", "https://tauri.localhost"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
