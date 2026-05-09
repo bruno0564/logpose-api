@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import body_weight
+from app.routers import body_weight, exercise
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,6 +16,7 @@ app.add_middleware(
 )
 
 app.include_router(body_weight.router)
+app.include_router(exercise.router)
 
 
 @app.get("/")
