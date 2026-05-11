@@ -30,6 +30,7 @@ def update_exercise(exercise_id: int, data: ExerciseUpdate, db: Session = Depend
     ex.name = data.name
     ex.muscle_group = data.muscle_group
     ex.notes = data.notes
+    ex.training_day_id = data.training_day_id
     db.commit()
     db.refresh(ex)
     return ex
