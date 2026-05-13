@@ -1,12 +1,11 @@
 from pydantic import BaseModel
 
 
-class ExerciseCreate(BaseModel):
+class RoutineCreate(BaseModel):
     name: str
-    muscle_group: str | None = None
 
 
-class ExerciseRead(ExerciseCreate):
+class RoutineRead(RoutineCreate):
     id: int
 
     model_config = {"from_attributes": True}
