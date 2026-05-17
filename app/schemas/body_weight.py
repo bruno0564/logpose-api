@@ -1,15 +1,15 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BodyWeightCreate(BaseModel):
-    weight: float
+    weight: float = Field(gt=0)
     date: date
     note: str | None = None
 
 
 class BodyWeightUpdate(BaseModel):
-    weight: float
+    weight: float = Field(gt=0)
     date: date
     note: str | None = None
 
