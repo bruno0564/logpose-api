@@ -1,8 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExerciseCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1)
     muscle_group: str | None = None
 
 
