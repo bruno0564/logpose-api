@@ -1,28 +1,28 @@
 from pydantic import BaseModel
 
 
-class TodoListCreate(BaseModel):
+class TaskListCreate(BaseModel):
     name: str
 
 
-class TodoListRead(TodoListCreate):
+class TaskListRead(TaskListCreate):
     id: int
 
     model_config = {"from_attributes": True}
 
 
-class TodoItemCreate(BaseModel):
+class TaskItemCreate(BaseModel):
     list_id: int
     title: str
     done: bool = False
 
 
-class TodoItemUpdate(BaseModel):
+class TaskItemUpdate(BaseModel):
     title: str
     done: bool
 
 
-class TodoItemRead(BaseModel):
+class TaskItemRead(BaseModel):
     id: int
     list_id: int
     title: str
