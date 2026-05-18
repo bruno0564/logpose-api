@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import body_weight, todo, quote, routine, exercise, gym, calendar_event
+from app.routers import body_weight, task, quote, routine, exercise, gym, calendar_event
 
 from app.models import body_weight as _bw
 from app.models import quote as _q
-from app.models.todo_list import TodoList
-from app.models.todo_item import TodoItem
+from app.models.task_list import TaskList
+from app.models.task_item import TaskItem
 from app.models.routine import Routine
 from app.models.exercise import Exercise
 from app.models.routine_exercise import RoutineExercise
@@ -28,7 +28,7 @@ app.add_middleware(
 
 app.include_router(body_weight.router)
 app.include_router(quote.router)
-app.include_router(todo.router)
+app.include_router(task.router)
 app.include_router(routine.router)
 app.include_router(exercise.router)
 app.include_router(gym.router)
