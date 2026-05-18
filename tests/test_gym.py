@@ -4,7 +4,7 @@
 
 import pytest
 
-VALID_EXERCISE = {"name": "Press banca", "muscle_group": "Pecho"}
+VALID_EXERCISE = {"name": "Press banca", "muscle_group": "Pecho", "muscle_subgroup": "Superior"}
 VALID_ROUTINE  = {"name": "Rutina A"}
 
 
@@ -46,16 +46,23 @@ class TestExercises:
         data = r.json()
         assert data["name"] == "Press banca"
         assert data["muscle_group"] == "Pecho"
+        assert data["muscle_subgroup"] == "Superior"
         assert "id" in data
 
     def test_crear_ejercicio_sin_grupo_muscular(self, client):
         r = client.post("/exercises/", json={"name": "Cardio libre"})
         assert r.status_code == 201
         assert r.json()["muscle_group"] is None
+        assert r.json()["muscle_subgroup"] is None
+
+    def test_crear_ejercicio_sin_subgrupo(self, client):
+        r = client.post("/exercises/", json={"name": "Dominadas", "muscle_group": "Espalda"})
+        assert r.status_code == 201
+        assert r.json()["muscle_subgroup"] is None
 
     def test_schema_completo_ejercicio(self, client):
         data = client.post("/exercises/", json=VALID_EXERCISE).json()
-        assert set(data.keys()) == {"id", "name", "muscle_group"}
+        assert set(data.keys()) == {"id", "name", "muscle_group", "muscle_subgroup"}
         assert isinstance(data["id"], int)
         assert isinstance(data["name"], str)
 
