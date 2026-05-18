@@ -66,6 +66,11 @@ def delete_session(session_id: int, db: Session = Depends(get_session)):
 
 # ── Workout Sets ──────────────────────────────────────────────────────────────
 
+@router.get("/sets/", response_model=list[SetRead])
+def list_all_sets(db: Session = Depends(get_session)):
+    return db.query(WorkoutSet).all()
+
+
 @router.get("/sessions/{session_id}/sets/", response_model=list[SetRead])
 def list_sets(session_id: int, db: Session = Depends(get_session)):
     return db.query(WorkoutSet).filter(WorkoutSet.session_id == session_id).all()
