@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_session
@@ -17,7 +18,11 @@ def list_entries(db: Session = Depends(get_session)):
 def create_entry(data: JournalEntryCreate, db: Session = Depends(get_session)):
     entry = JournalEntry(**data.model_dump())
     db.add(entry)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Already exists an entry for this date")
     db.refresh(entry)
     return entry
 
