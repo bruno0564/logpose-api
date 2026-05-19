@@ -1,8 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TaskListCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1)
 
 
 class TaskListRead(TaskListCreate):
@@ -13,12 +13,12 @@ class TaskListRead(TaskListCreate):
 
 class TaskItemCreate(BaseModel):
     list_id: int
-    title: str
+    title: str = Field(min_length=1)
     done: bool = False
 
 
 class TaskItemUpdate(BaseModel):
-    title: str
+    title: str = Field(min_length=1)
     done: bool
 
 

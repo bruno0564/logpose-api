@@ -75,6 +75,10 @@ class TestCreateQuote:
         r = client.post("/quotes/", json={})
         assert r.status_code == 422
 
+    def test_texto_vacio_rechazado(self, client):
+        r = client.post("/quotes/", json={"text": ""})
+        assert r.status_code == 422
+
     def test_ids_son_unicos(self, client):
         id1 = create_quote(client, "Frase 1")["id"]
         id2 = create_quote(client, "Frase 2")["id"]

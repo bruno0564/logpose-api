@@ -71,11 +71,8 @@ class TestCreateList:
         assert r.status_code == 422
 
     def test_nombre_vacio_rechazado(self, client):
-        # Pydantic rechaza strings vacías si no se permite
         r = client.post("/tasks/lists", json={"name": ""})
-        # La API actual acepta strings vacías (no hay validación mínima de longitud)
-        # Este test documenta el comportamiento actual
-        assert r.status_code in (201, 422)
+        assert r.status_code == 422
 
     def test_multiples_listas_con_mismo_nombre(self, client):
         r1 = client.post("/tasks/lists", json={"name": "Duplicado"})
