@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import body_weight, task, quote, routine, exercise, gym, calendar_event
+from app.routers import body_weight, task, quote, routine, exercise, gym, calendar_event, journal
 
 from app.models import body_weight as _bw
 from app.models import quote as _q
@@ -14,6 +14,7 @@ from app.models.routine_exercise import RoutineExercise
 from app.models.workout_session import WorkoutSession
 from app.models.workout_set import WorkoutSet
 from app.models.calendar_event import CalendarEvent
+from app.models.journal_entry import JournalEntry
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,6 +34,7 @@ app.include_router(routine.router)
 app.include_router(exercise.router)
 app.include_router(gym.router)
 app.include_router(calendar_event.router)
+app.include_router(journal.router)
 
 
 @app.get("/")
