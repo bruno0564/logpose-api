@@ -60,6 +60,7 @@ def delete_session(session_id: int, db: Session = Depends(get_session)):
     s = db.get(WorkoutSession, session_id)
     if not s:
         raise HTTPException(status_code=404, detail="Session not found")
+    db.query(WorkoutSet).filter(WorkoutSet.session_id == session_id).delete(synchronize_session=False)
     db.delete(s)
     db.commit()
 

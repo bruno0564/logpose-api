@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models.routine import Routine
+from app.models.routine_exercise import RoutineExercise
+from app.models.workout_session import WorkoutSession
+from app.models.workout_set import WorkoutSet
 from app.schemas.routine import RoutineCreate, RoutineRead, RoutineUpdate
 
 router = APIRouter(prefix="/routines", tags=["routines"])
@@ -38,5 +41,10 @@ def delete_routine(routine_id: int, db: Session = Depends(get_session)):
     routine = db.get(Routine, routine_id)
     if not routine:
         raise HTTPException(status_code=404, detail="Routine not found")
+    session_ids = [s.id for s in db.query(WorkoutSession).filter(WorkoutSession.routine_id == routine_id).all()]
+    if session_ids:
+        db.query(WorkoutSet).filter(WorkoutSet.session_id.in_(session_ids)).delete(synchronize_session=False)
+    db.query(WorkoutSession).filter(WorkoutSession.routine_id == routine_id).delete(synchronize_session=False)
+    db.query(RoutineExercise).filter(RoutineExercise.routine_id == routine_id).delete(synchronize_session=False)
     db.delete(routine)
     db.commit()

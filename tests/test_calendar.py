@@ -130,6 +130,11 @@ class TestCreateEvent:
         assert r2.status_code == 201
         assert r1.json()["id"] != r2.json()["id"]
 
+    @pytest.mark.parametrize("recurrence", ["monthly", "DAILY", "weekly_custom", "", "nunca"])
+    def test_recurrencia_invalida_rechazada(self, client, recurrence):
+        r = client.post("/calendar/", json={"title": "X", "recurrence": recurrence})
+        assert r.status_code == 422
+
 
 # ── PUT /calendar/{event_id} ───────────────────────────────────────────────────
 
@@ -166,6 +171,12 @@ class TestUpdateEvent:
         ev = create_event(client)
         updated = client.put(f"/calendar/{ev['id']}", json={"title": "Nuevo", "recurrence": "none"}).json()
         assert updated["id"] == ev["id"]
+
+    @pytest.mark.parametrize("recurrence", ["monthly", "DAILY", "weekly_custom", ""])
+    def test_recurrencia_invalida_en_put(self, client, recurrence):
+        ev = create_event(client)
+        r = client.put(f"/calendar/{ev['id']}", json={"title": "X", "recurrence": recurrence})
+        assert r.status_code == 422
 
     def test_cambios_persisten_en_get(self, client):
         ev = create_event(client, title="Original")
