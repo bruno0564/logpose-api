@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models.exercise import Exercise
-from app.schemas.exercise import ExerciseCreate, ExerciseRead
+from app.schemas.exercise import ExerciseCreate, ExerciseRead, ExerciseUpdate
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
@@ -17,6 +17,19 @@ def list_exercises(db: Session = Depends(get_session)):
 def create_exercise(data: ExerciseCreate, db: Session = Depends(get_session)):
     ex = Exercise(**data.model_dump())
     db.add(ex)
+    db.commit()
+    db.refresh(ex)
+    return ex
+
+
+@router.put("/{exercise_id}", response_model=ExerciseRead)
+def update_exercise(exercise_id: int, data: ExerciseUpdate, db: Session = Depends(get_session)):
+    ex = db.get(Exercise, exercise_id)
+    if not ex:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    ex.name = data.name
+    ex.muscle_group = data.muscle_group
+    ex.muscle_subgroup = data.muscle_subgroup
     db.commit()
     db.refresh(ex)
     return ex

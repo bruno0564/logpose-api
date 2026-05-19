@@ -5,6 +5,10 @@ class RoutineCreate(BaseModel):
     name: str = Field(min_length=1)
 
 
+class RoutineUpdate(BaseModel):
+    name: str = Field(min_length=1)
+
+
 class RoutineRead(RoutineCreate):
     id: int
 

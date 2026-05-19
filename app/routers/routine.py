@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models.routine import Routine
-from app.schemas.routine import RoutineCreate, RoutineRead
+from app.schemas.routine import RoutineCreate, RoutineRead, RoutineUpdate
 
 router = APIRouter(prefix="/routines", tags=["routines"])
 
@@ -17,6 +17,17 @@ def list_routines(db: Session = Depends(get_session)):
 def create_routine(data: RoutineCreate, db: Session = Depends(get_session)):
     routine = Routine(**data.model_dump())
     db.add(routine)
+    db.commit()
+    db.refresh(routine)
+    return routine
+
+
+@router.put("/{routine_id}", response_model=RoutineRead)
+def update_routine(routine_id: int, data: RoutineUpdate, db: Session = Depends(get_session)):
+    routine = db.get(Routine, routine_id)
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+    routine.name = data.name
     db.commit()
     db.refresh(routine)
     return routine
