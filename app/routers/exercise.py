@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models.exercise import Exercise
+from app.models.routine_exercise import RoutineExercise
+from app.models.workout_set import WorkoutSet
 from app.schemas.exercise import ExerciseCreate, ExerciseRead, ExerciseUpdate
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
@@ -40,5 +42,7 @@ def delete_exercise(exercise_id: int, db: Session = Depends(get_session)):
     ex = db.get(Exercise, exercise_id)
     if not ex:
         raise HTTPException(status_code=404, detail="Exercise not found")
+    db.query(WorkoutSet).filter(WorkoutSet.exercise_id == exercise_id).delete(synchronize_session=False)
+    db.query(RoutineExercise).filter(RoutineExercise.exercise_id == exercise_id).delete(synchronize_session=False)
     db.delete(ex)
     db.commit()

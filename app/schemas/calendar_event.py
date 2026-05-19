@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel
 
 
@@ -6,7 +7,7 @@ class CalendarEventCreate(BaseModel):
     date: str | None = None
     start_time: str | None = None
     end_time: str | None = None
-    recurrence: str = "none"
+    recurrence: Literal["none", "daily", "weekly"] = "none"
     days_of_week: str | None = None
     notes: str | None = None
     color: str | None = None

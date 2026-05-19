@@ -94,6 +94,35 @@ class TestExercises:
         client.delete(f"/exercises/{ex_id}")
         assert all(e["id"] != ex_id for e in client.get("/exercises/").json())
 
+    def test_renombrar_ejercicio(self, client):
+        ex_id = create_exercise(client)["id"]
+        r = client.put(f"/exercises/{ex_id}", json={"name": "Nuevo nombre", "muscle_group": "Pecho", "muscle_subgroup": "Superior"})
+        assert r.status_code == 200
+        assert r.json()["name"] == "Nuevo nombre"
+
+    def test_renombrar_ejercicio_cambia_grupo_muscular(self, client):
+        ex_id = create_exercise(client)["id"]
+        r = client.put(f"/exercises/{ex_id}", json={"name": "Press banca", "muscle_group": "Hombro", "muscle_subgroup": None})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["muscle_group"] == "Hombro"
+        assert data["muscle_subgroup"] is None
+
+    def test_renombrar_ejercicio_inexistente(self, client):
+        r = client.put("/exercises/9999", json={"name": "X", "muscle_group": None, "muscle_subgroup": None})
+        assert r.status_code == 404
+
+    def test_renombrar_ejercicio_nombre_vacio(self, client):
+        ex_id = create_exercise(client)["id"]
+        r = client.put(f"/exercises/{ex_id}", json={"name": "", "muscle_group": None, "muscle_subgroup": None})
+        assert r.status_code == 422
+
+    def test_renombrar_persiste_en_lista(self, client):
+        ex_id = create_exercise(client)["id"]
+        client.put(f"/exercises/{ex_id}", json={"name": "Persistido", "muscle_group": None, "muscle_subgroup": None})
+        exercises = client.get("/exercises/").json()
+        assert any(e["name"] == "Persistido" for e in exercises)
+
 
 # ── Routines ───────────────────────────────────────────────────────────────────
 
@@ -131,6 +160,43 @@ class TestRoutines:
         r_id = create_routine(client)["id"]
         client.delete(f"/routines/{r_id}")
         assert all(r["id"] != r_id for r in client.get("/routines/").json())
+
+    def test_renombrar_rutina(self, client):
+        r_id = create_routine(client)["id"]
+        r = client.put(f"/routines/{r_id}", json={"name": "Rutina B"})
+        assert r.status_code == 200
+        assert r.json()["name"] == "Rutina B"
+
+    def test_renombrar_rutina_inexistente(self, client):
+        r = client.put("/routines/9999", json={"name": "X"})
+        assert r.status_code == 404
+
+    def test_renombrar_rutina_nombre_vacio(self, client):
+        r_id = create_routine(client)["id"]
+        r = client.put(f"/routines/{r_id}", json={"name": ""})
+        assert r.status_code == 422
+
+    def test_renombrar_persiste_en_lista(self, client):
+        r_id = create_routine(client)["id"]
+        client.put(f"/routines/{r_id}", json={"name": "Persistida"})
+        routines = client.get("/routines/").json()
+        assert any(r["name"] == "Persistida" for r in routines)
+
+    def test_borrar_rutina_limpia_routine_exercises(self, client):
+        ex_id = create_exercise(client)["id"]
+        r_id  = create_routine(client)["id"]
+        create_routine_exercise(client, r_id, ex_id)
+        client.delete(f"/routines/{r_id}")
+        assert client.get("/gym/routine-exercises/").json() == []
+
+    def test_borrar_rutina_limpia_sessions_y_sets(self, client):
+        ex_id = create_exercise(client)["id"]
+        r_id  = create_routine(client)["id"]
+        s_id  = create_session(client, routine_id=r_id, day_of_week=0)["id"]
+        create_set(client, s_id, ex_id)
+        client.delete(f"/routines/{r_id}")
+        assert client.get("/gym/sessions/").json() == []
+        assert client.get("/gym/sets/").json() == []
 
 
 # ── Routine Exercises ──────────────────────────────────────────────────────────
