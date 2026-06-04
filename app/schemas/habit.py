@@ -11,15 +11,15 @@ class HabitCategoryRead(HabitCategoryCreate):
 
 
 class HabitCreate(BaseModel):
-    category_id: int
-    name:        str
-    goal:        int = Field(default=30, ge=1, le=31)
-    position:    int = 0
+    category_id:  int
+    name:         str
+    days_of_week: str = "0,1,2,3,4,5,6"
+    position:     int = 0
 
 class HabitUpdate(BaseModel):
-    name:     str
-    goal:     int = Field(default=30, ge=1, le=31)
-    position: int = 0
+    name:         str
+    days_of_week: str = "0,1,2,3,4,5,6"
+    position:     int = 0
 
 class HabitRead(HabitCreate):
     id: int

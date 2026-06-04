@@ -67,9 +67,9 @@ def update_habit(habit_id: int, data: HabitUpdate, db: Session = Depends(get_ses
     habit = db.get(Habit, habit_id)
     if not habit:
         raise HTTPException(404, "Habit not found")
-    habit.name     = data.name
-    habit.goal     = data.goal
-    habit.position = data.position
+    habit.name         = data.name
+    habit.days_of_week = data.days_of_week
+    habit.position     = data.position
     db.commit()
     db.refresh(habit)
     return habit

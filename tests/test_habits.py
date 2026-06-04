@@ -5,7 +5,7 @@
 import pytest
 
 VALID_CATEGORY = {"name": "Productividad", "color": "#7c3aed"}
-VALID_HABIT    = {"name": "Leer 1h", "goal": 30}
+VALID_HABIT    = {"name": "Leer", "days_of_week": "0,1,2,3,4,5,6"}   # todos los días
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -49,8 +49,7 @@ class TestHabitCategories:
     def test_varias_categorias_en_lista(self, client):
         create_category(client, name="A")
         create_category(client, name="B")
-        cats = client.get("/habits/categories").json()
-        assert len(cats) == 2
+        assert len(client.get("/habits/categories").json()) == 2
 
     @pytest.mark.parametrize("payload", [
         {},             # falta name
@@ -68,14 +67,12 @@ class TestHabitCategories:
         assert data["color"] == "#dc2626"
 
     def test_actualizar_categoria_inexistente(self, client):
-        r = client.put("/habits/categories/9999", json={"name": "X", "color": "#000"})
-        assert r.status_code == 404
+        assert client.put("/habits/categories/9999", json={"name": "X", "color": "#000"}).status_code == 404
 
     def test_actualizar_persiste_en_lista(self, client):
         cat_id = create_category(client)["id"]
         client.put(f"/habits/categories/{cat_id}", json={"name": "Actualizada", "color": "#16a34a"})
-        cats = client.get("/habits/categories").json()
-        assert any(c["name"] == "Actualizada" for c in cats)
+        assert any(c["name"] == "Actualizada" for c in client.get("/habits/categories").json())
 
     def test_borrar_categoria_existente(self, client):
         cat_id = create_category(client)["id"]
@@ -96,8 +93,8 @@ class TestHabitCategories:
         assert client.get("/habits/").json() == []
 
     def test_borrar_categoria_limpia_logs(self, client):
-        cat_id  = create_category(client)["id"]
-        hab_id  = create_habit(client, cat_id)["id"]
+        cat_id = create_category(client)["id"]
+        hab_id = create_habit(client, cat_id)["id"]
         create_log(client, hab_id)
         client.delete(f"/habits/categories/{cat_id}")
         assert client.get("/habits/logs").json() == []
@@ -109,39 +106,43 @@ class TestHabits:
     def test_lista_vacia(self, client):
         assert client.get("/habits/").json() == []
 
-    def test_crear_habito_completo(self, client):
+    def test_crear_habito_todos_los_dias(self, client):
         cat_id = create_category(client)["id"]
-        r = client.post("/habits/", json={"category_id": cat_id, "name": "Leer 1h", "goal": 30, "position": 0})
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "Leer", "days_of_week": "0,1,2,3,4,5,6"})
         assert r.status_code == 201
         data = r.json()
-        assert data["name"]        == "Leer 1h"
-        assert data["goal"]        == 30
-        assert data["category_id"] == cat_id
+        assert data["name"]         == "Leer"
+        assert data["days_of_week"] == "0,1,2,3,4,5,6"
+        assert data["category_id"]  == cat_id
         assert "id" in data
 
-    def test_crear_habito_goal_por_defecto(self, client):
+    def test_crear_habito_solo_laborables(self, client):
+        cat_id = create_category(client)["id"]
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "Trabajar", "days_of_week": "0,1,2,3,4"})
+        assert r.status_code == 201
+        assert r.json()["days_of_week"] == "0,1,2,3,4"
+
+    def test_crear_habito_days_por_defecto(self, client):
         cat_id = create_category(client)["id"]
         r = client.post("/habits/", json={"category_id": cat_id, "name": "Meditar"})
         assert r.status_code == 201
-        assert r.json()["goal"] == 30
+        assert r.json()["days_of_week"] == "0,1,2,3,4,5,6"
 
     def test_schema_completo_habito(self, client):
         cat_id = create_category(client)["id"]
         data = create_habit(client, cat_id)
-        assert set(data.keys()) == {"id", "category_id", "name", "goal", "position"}
+        assert set(data.keys()) == {"id", "category_id", "name", "days_of_week", "position"}
 
-    def test_habito_goal_personalizado(self, client):
+    def test_crear_habito_tres_dias_semana(self, client):
         cat_id = create_category(client)["id"]
-        r = client.post("/habits/", json={"category_id": cat_id, "name": "Cambiar funda", "goal": 12})
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "Gym", "days_of_week": "0,2,4"})
         assert r.status_code == 201
-        assert r.json()["goal"] == 12
+        assert r.json()["days_of_week"] == "0,2,4"
 
     @pytest.mark.parametrize("payload", [
-        {"name": "Sin cat", "goal": 30},                   # falta category_id
-        {"category_id": 1, "goal": 30},                    # falta name
-        {"category_id": 1, "name": "X", "goal": 0},        # goal < 1
-        {"category_id": 1, "name": "X", "goal": 32},       # goal > 31
-        {"category_id": 1, "name": 999, "goal": 30},       # name no es string
+        {"name": "Sin cat", "days_of_week": "0,1,2"},         # falta category_id
+        {"category_id": 1, "days_of_week": "0,1,2"},          # falta name
+        {"category_id": 1, "name": 999, "days_of_week": "0"}, # name no es string
     ])
     def test_crear_habito_invalido(self, client, payload):
         assert client.post("/habits/", json=payload).status_code == 422
@@ -149,22 +150,20 @@ class TestHabits:
     def test_actualizar_habito(self, client):
         cat_id = create_category(client)["id"]
         hab_id = create_habit(client, cat_id)["id"]
-        r = client.put(f"/habits/{hab_id}", json={"name": "Leer 30min", "goal": 20, "position": 1})
+        r = client.put(f"/habits/{hab_id}", json={"name": "Leer 30min", "days_of_week": "0,2,4", "position": 1})
         assert r.status_code == 200
         data = r.json()
-        assert data["name"] == "Leer 30min"
-        assert data["goal"] == 20
+        assert data["name"]         == "Leer 30min"
+        assert data["days_of_week"] == "0,2,4"
 
     def test_actualizar_habito_inexistente(self, client):
-        r = client.put("/habits/9999", json={"name": "X", "goal": 30, "position": 0})
-        assert r.status_code == 404
+        assert client.put("/habits/9999", json={"name": "X", "days_of_week": "0", "position": 0}).status_code == 404
 
     def test_actualizar_persiste_en_lista(self, client):
         cat_id = create_category(client)["id"]
         hab_id = create_habit(client, cat_id)["id"]
-        client.put(f"/habits/{hab_id}", json={"name": "Persistido", "goal": 15, "position": 0})
-        habits = client.get("/habits/").json()
-        assert any(h["name"] == "Persistido" for h in habits)
+        client.put(f"/habits/{hab_id}", json={"name": "Persistido", "days_of_week": "1,3,5", "position": 0})
+        assert any(h["name"] == "Persistido" for h in client.get("/habits/").json())
 
     def test_borrar_habito_existente(self, client):
         cat_id = create_category(client)["id"]
@@ -187,7 +186,7 @@ class TestHabits:
         client.delete(f"/habits/{hab_id}")
         assert client.get("/habits/logs").json() == []
 
-    def test_varios_habitos_en_misma_categoria(self, client):
+    def test_varios_habitos_misma_categoria(self, client):
         cat_id = create_category(client)["id"]
         create_habit(client, cat_id, name="H1")
         create_habit(client, cat_id, name="H2")
@@ -221,7 +220,7 @@ class TestHabitLogs:
     @pytest.mark.parametrize("payload", [
         {"date": "2026-06-04"},                      # falta habit_id
         {"habit_id": 1},                              # falta date
-        {"habit_id": 1, "date": "04-06-2026"},        # formato de fecha incorrecto
+        {"habit_id": 1, "date": "04-06-2026"},        # formato incorrecto
         {"habit_id": "abc", "date": "2026-06-04"},    # habit_id no es int
     ])
     def test_crear_log_invalido(self, client, payload):
@@ -233,9 +232,9 @@ class TestHabitLogs:
         create_log(client, hab_id, date="2026-06-01")
         create_log(client, hab_id, date="2026-06-15")
         create_log(client, hab_id, date="2026-07-01")
-        logs_junio = client.get("/habits/logs?month=2026-06").json()
-        assert len(logs_junio) == 2
-        assert all(l["date"].startswith("2026-06") for l in logs_junio)
+        logs = client.get("/habits/logs?month=2026-06").json()
+        assert len(logs) == 2
+        assert all(l["date"].startswith("2026-06") for l in logs)
 
     def test_filtrar_mes_sin_logs(self, client):
         cat_id = create_category(client)["id"]
@@ -300,54 +299,50 @@ class TestEscenarioHabits:
         # 1. Crear dos categorías
         cat_prod = create_category(client, name="Productividad", color="#7c3aed")["id"]
         cat_fis  = create_category(client, name="Físico",        color="#16a34a")["id"]
-        cats = client.get("/habits/categories").json()
-        assert len(cats) == 2
+        assert len(client.get("/habits/categories").json()) == 2
 
-        # 2. Crear hábitos en cada categoría
-        leer  = create_habit(client, cat_prod, name="Leer 1h",   goal=30)["id"]
-        estud = create_habit(client, cat_prod, name="Estudiar",   goal=25)["id"]
-        gym   = create_habit(client, cat_fis,  name="Gym",        goal=20)["id"]
+        # 2. Hábitos con distintas frecuencias
+        leer  = create_habit(client, cat_prod, name="Leer",    days_of_week="0,1,2,3,4,5,6")["id"]  # diario
+        estud = create_habit(client, cat_prod, name="Estudiar", days_of_week="0,1,2,3,4")["id"]      # lab
+        gym   = create_habit(client, cat_fis,  name="Gym",      days_of_week="0,2,4")["id"]          # L/X/V
 
-        habits = client.get("/habits/").json()
-        assert len(habits) == 3
-        assert all(h["category_id"] in {cat_prod, cat_fis} for h in habits)
+        assert len(client.get("/habits/").json()) == 3
 
-        # 3. Marcar días: leer los días 1-5, estudiar 3 días, gym 2 días
+        # 3. Marcar días
         for d in range(1, 6):
             create_log(client, leer,  date=f"2026-06-{d:02d}")
-        for d in [1, 3, 5]:
+        for d in [2, 4]:
             create_log(client, estud, date=f"2026-06-{d:02d}")
-        create_log(client, gym, date="2026-06-01")
-        create_log(client, gym, date="2026-06-03")
+        create_log(client, gym, date="2026-06-02")
 
         logs_junio = client.get("/habits/logs?month=2026-06").json()
-        assert len(logs_junio) == 10
+        assert len(logs_junio) == 8
 
-        # 4. Verificar filtro por mes: julio no tiene nada
+        # 4. Julio no tiene nada
         assert client.get("/habits/logs?month=2026-07").json() == []
 
-        # 5. Borrar un log suelto (desmarcar un día)
-        log_leer_1 = next(l for l in logs_junio if l["habit_id"] == leer and l["date"] == "2026-06-01")
-        client.delete(f"/habits/logs/{log_leer_1['id']}")
-        assert len(client.get("/habits/logs?month=2026-06").json()) == 9
+        # 5. Desmarcar un día
+        log_id = next(l["id"] for l in logs_junio if l["habit_id"] == leer and l["date"] == "2026-06-01")
+        client.delete(f"/habits/logs/{log_id}")
+        assert len(client.get("/habits/logs?month=2026-06").json()) == 7
 
-        # 6. Editar un hábito
-        r = client.put(f"/habits/{estud}", json={"name": "Estudiar 2h", "goal": 20, "position": 1})
+        # 6. Editar hábito: cambiar días de la semana
+        r = client.put(f"/habits/{estud}", json={"name": "Estudiar 2h", "days_of_week": "0,1,2,3,4,5", "position": 1})
         assert r.status_code == 200
-        assert r.json()["name"] == "Estudiar 2h"
+        assert r.json()["days_of_week"] == "0,1,2,3,4,5"
 
-        # 7. Borrar un hábito → sus logs desaparecen
+        # 7. Borrar hábito → sus logs desaparecen
         client.delete(f"/habits/{gym}")
         assert all(h["id"] != gym for h in client.get("/habits/").json())
         assert all(l["habit_id"] != gym for l in client.get("/habits/logs").json())
 
-        # 8. Borrar una categoría entera → sus hábitos y logs desaparecen
+        # 8. Borrar categoría → borra hábitos y logs en cascada
         client.delete(f"/habits/categories/{cat_prod}")
         assert all(c["id"] != cat_prod for c in client.get("/habits/categories").json())
         assert client.get("/habits/").json() == []
         assert client.get("/habits/logs").json() == []
 
-        # 9. Solo queda la categoría Físico (sin hábitos porque gym fue borrado)
+        # 9. Solo queda la categoría Físico (vacía)
         cats = client.get("/habits/categories").json()
         assert len(cats) == 1
         assert cats[0]["id"] == cat_fis

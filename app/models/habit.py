@@ -14,9 +14,9 @@ class Habit(Base):
     __tablename__ = "habits"
     id:          Mapped[int]      = mapped_column(primary_key=True, index=True)
     category_id: Mapped[int]      = mapped_column(Integer, ForeignKey("habit_categories.id"), nullable=False)
-    name:        Mapped[str]      = mapped_column(String, nullable=False)
-    goal:        Mapped[int]      = mapped_column(Integer, nullable=False, default=30)
-    position:    Mapped[int]      = mapped_column(Integer, nullable=False, default=0)
+    name:         Mapped[str] = mapped_column(String, nullable=False)
+    days_of_week: Mapped[str] = mapped_column(String, nullable=False, default="0,1,2,3,4,5,6")
+    position:     Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class HabitLog(Base):
