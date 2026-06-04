@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_session
 from app.models.habit import HabitCategory, Habit, HabitLog
 from app.schemas.habit import (
-    HabitCategoryCreate, HabitCategoryRead,
+    HabitCategoryCreate, HabitCategoryUpdate, HabitCategoryRead,
     HabitCreate, HabitUpdate, HabitRead,
     HabitLogCreate, HabitLogRead,
 )
@@ -26,7 +26,7 @@ def create_category(data: HabitCategoryCreate, db: Session = Depends(get_session
     return cat
 
 @router.put("/categories/{cat_id}", response_model=HabitCategoryRead)
-def update_category(cat_id: int, data: HabitCategoryCreate, db: Session = Depends(get_session)):
+def update_category(cat_id: int, data: HabitCategoryUpdate, db: Session = Depends(get_session)):
     cat = db.get(HabitCategory, cat_id)
     if not cat:
         raise HTTPException(404, "Category not found")
@@ -94,6 +94,14 @@ def list_logs(month: str | None = None, db: Session = Depends(get_session)):
 
 @router.post("/logs", response_model=HabitLogRead, status_code=201)
 def create_log(data: HabitLogCreate, db: Session = Depends(get_session)):
+    # Idempotente: marcar el mismo (habit, día) dos veces no crea duplicados.
+    # Esto es lo que evita que el sync multi-dispositivo propague logs repetidos.
+    existing = db.query(HabitLog).filter(
+        HabitLog.habit_id == data.habit_id,
+        HabitLog.date == data.date,
+    ).first()
+    if existing:
+        return existing
     log = HabitLog(**data.model_dump())
     db.add(log)
     db.commit()

@@ -147,6 +147,19 @@ class TestHabits:
     def test_crear_habito_invalido(self, client, payload):
         assert client.post("/habits/", json=payload).status_code == 422
 
+    @pytest.mark.parametrize("dow", [
+        "abc",          # no numérico
+        "7",            # fuera de rango (solo 0-6)
+        "0,1,8",        # un día fuera de rango
+        "0,",           # coma colgante
+        "",             # vacío
+        "0 1 2",        # separado por espacios
+    ])
+    def test_crear_habito_days_of_week_invalido(self, client, dow):
+        cat_id = create_category(client)["id"]
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "X", "days_of_week": dow})
+        assert r.status_code == 422
+
     def test_actualizar_habito(self, client):
         cat_id = create_category(client)["id"]
         hab_id = create_habit(client, cat_id)["id"]
@@ -216,6 +229,16 @@ class TestHabitLogs:
         hab_id = create_habit(client, cat_id)["id"]
         data = create_log(client, hab_id)
         assert set(data.keys()) == {"id", "habit_id", "date"}
+
+    def test_crear_log_es_idempotente(self, client):
+        # Marcar el mismo (hábito, día) dos veces NO debe crear duplicados.
+        # Defiende el sync multi-dispositivo de logs repetidos.
+        cat_id = create_category(client)["id"]
+        hab_id = create_habit(client, cat_id)["id"]
+        first  = create_log(client, hab_id, date="2026-06-04")
+        second = create_log(client, hab_id, date="2026-06-04")
+        assert first["id"] == second["id"]
+        assert len(client.get("/habits/logs").json()) == 1
 
     @pytest.mark.parametrize("payload", [
         {"date": "2026-06-04"},                      # falta habit_id
