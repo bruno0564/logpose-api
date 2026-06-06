@@ -1,46 +1,46 @@
 # logpose-api
 
-Backend de **Logpose**, una app personal de life tracking. El nombre es una referencia a One Piece — el Log Pose es el instrumento de navegación que registra cada isla visitada.
+Backend for **Logpose**, a personal life-tracking app. The name is a One Piece reference — the Log Pose is the navigation instrument that records every island you visit.
 
-## Qué es
+## What it is
 
-API REST que actúa como capa de sincronización para las apps de escritorio y móvil. Las apps funcionan offline-first (los datos se guardan localmente en SQLite) y usan estos endpoints para sincronizar en segundo plano cuando hay conexión.
+A REST API that acts as the sync layer for the desktop and mobile apps. The apps are offline-first (data is stored locally in SQLite) and use these endpoints to sync in the background when there's a connection.
 
 ## Stack
 
 - **Python 3.14** + **FastAPI**
-- **SQLAlchemy 2.x** con la nueva API `Mapped` / `mapped_column`
-- **SQLite** (base de datos local, sin dependencias externas)
-- **Pydantic v2** (validación de schemas)
-- **pytest** + **httpx** (220 tests de integración)
+- **SQLAlchemy 2.x** with the new `Mapped` / `mapped_column` API
+- **SQLite** (local database, no external dependencies)
+- **Pydantic v2** (schema validation)
+- **pytest** + **httpx** (220 integration tests)
 
-## Módulos
+## Modules
 
-| Módulo | Endpoints | Descripción |
+| Module | Endpoints | Description |
 |---|---|---|
-| Body Weight | `/body-weight/` | Registro diario de peso corporal |
-| Ejercicios | `/exercises/` | Catálogo de ejercicios con grupo y subgrupo muscular |
-| Rutinas | `/routines/` | Rutinas semanales de entrenamiento |
-| Gym | `/gym/routine-exercises/` `/gym/sessions/` `/gym/sets/` | Ejercicios por día, sesiones de entreno y series |
-| Calendario | `/calendar/` | Eventos con recurrencia (`none` / `daily` / `weekly`) |
-| Tareas | `/tasks/lists` `/tasks/items` | Listas de tareas con items y estado completado |
-| Diario | `/journal/` | Entrada diaria — una por día, con detección de duplicados (409) |
-| Frases | `/quotes/` | Frases motivacionales con autor opcional |
+| Body Weight | `/body-weight/` | Daily body-weight log |
+| Exercises | `/exercises/` | Exercise catalogue with muscle group and subgroup |
+| Routines | `/routines/` | Weekly training routines |
+| Gym | `/gym/routine-exercises/` `/gym/sessions/` `/gym/sets/` | Exercises per day, training sessions and sets |
+| Calendar | `/calendar/` | Events with recurrence (`none` / `daily` / `weekly`) |
+| Tasks | `/tasks/lists` `/tasks/items` | Task lists with items and completed state |
+| Journal | `/journal/` | Daily entry — one per day, with duplicate detection (409) |
+| Quotes | `/quotes/` | Motivational quotes with optional author |
 
-Todos los módulos implementan CRUD completo con borrados en cascada donde corresponde (borrar una rutina limpia sus sesiones y series; borrar un ejercicio limpia sus routine_exercises y sets).
+All modules implement full CRUD with cascading deletes where appropriate (deleting a routine clears its sessions and sets; deleting an exercise clears its routine_exercises and sets).
 
-## Arquitectura de sincronización
+## Sync architecture
 
 ```
 [React Native / Expo]           [React + Tauri]
-       Móvil          ←──────→  Desktop
-          ↕           sincroniza  ↕
-    SQLite local                SQLite local
+       Mobile         ←──────→  Desktop
+          ↕            syncs      ↕
+    local SQLite                local SQLite
           ↕                       ↕
-     [FastAPI + SQLite]  ←── este repo
+     [FastAPI + SQLite]  ←── this repo
 ```
 
-Cada registro en las apps tiene tres campos de control: `server_id` (id en el servidor, null si no se ha sincronizado), `synced` (0/1) y `pending_delete` (1 si está marcado para borrar del servidor). El ciclo de sync es: push deletes → push unsynced → pull server → prune stale.
+Each record in the apps has three control fields: `server_id` (id on the server, null if not yet synced), `synced` (0/1) and `pending_delete` (1 if marked for deletion on the server). The sync cycle is: push deletes → push unsynced → pull server → prune stale.
 
 ## Tests
 
@@ -48,29 +48,29 @@ Cada registro en las apps tiene tres campos de control: `server_id` (id en el se
 pytest
 ```
 
-220 tests de integración organizados por módulo. Cada test usa una base de datos SQLite en memoria aislada (fixture `client` en `conftest.py`). Cubren particiones equivalentes, valores límite y escenarios de sistema completos (flujo CRUD de principio a fin).
+220 integration tests organised by module. Each test uses an isolated in-memory SQLite database (the `client` fixture in `conftest.py`). They cover equivalence partitions, boundary values and full end-to-end scenarios (complete CRUD flow).
 
-## Estructura
+## Structure
 
 ```
 app/
-├── main.py          — punto de entrada: routers, CORS, creación de tablas
-├── database.py      — engine SQLite, sesión, Base declarativa, PRAGMA foreign_keys=ON
-├── models/          — modelos SQLAlchemy (un archivo por tabla)
-├── schemas/         — schemas Pydantic (Create / Update / Read)
-└── routers/         — endpoints FastAPI (un router por módulo)
+├── main.py          — entry point: routers, CORS, table creation
+├── database.py      — SQLite engine, session, declarative Base, PRAGMA foreign_keys=ON
+├── models/          — SQLAlchemy models (one file per table)
+├── schemas/         — Pydantic schemas (Create / Update / Read)
+└── routers/         — FastAPI endpoints (one router per module)
 tests/
-├── conftest.py      — fixture client con SQLite en memoria
-└── test_*.py        — tests de integración por módulo
+├── conftest.py      — client fixture with in-memory SQLite
+└── test_*.py        — integration tests per module
 ```
 
-## Cómo arrancar
+## Running it
 
 ```bash
 source .venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --reload
 ```
 
-API en `http://localhost:8000`. Documentación interactiva en `http://localhost:8000/docs`.
+API at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
-`--host 0.0.0.0` es necesario para que el móvil pueda conectarse desde la misma red local.
+`--host 0.0.0.0` is required so the mobile app can connect from the same local network.
