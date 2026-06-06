@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.database import engine, Base
 from app.routers import body_weight, task, quote, routine, exercise, gym, calendar_event, journal, habit
@@ -18,6 +22,27 @@ from app.models.journal_entry import JournalEntry
 from app.models.habit import HabitCategory, Habit, HabitLog
 
 Base.metadata.create_all(bind=engine)
+
+# Migración idempotente: el UniqueConstraint(habit_id, date) del modelo solo se
+# aplica a tablas creadas desde cero (create_all no hace ALTER). Para la tabla
+# habit_logs ya existente añadimos el mismo enforcement como índice único — en
+# SQLite un índice único equivale a la constraint y, a diferencia de añadir una
+# constraint, no requiere reconstruir la tabla. Si hubiera duplicados previos la
+# creación fallaría: lo registramos como warning en vez de tumbar el arranque.
+def _ensure_habit_log_unique_index():
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_habit_log_day "
+                "ON habit_logs (habit_id, date)"
+            ))
+    except (IntegrityError, OperationalError) as e:
+        logging.getLogger("uvicorn.error").warning(
+            "No se pudo crear uq_habit_log_day (¿logs duplicados existentes?): %s", e
+        )
+
+
+_ensure_habit_log_unique_index()
 
 app = FastAPI(title="Logpose API")
 
