@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -17,6 +17,13 @@ def client():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    # Paridad con producción: SQLite trae las FK desactivadas por defecto y se
+    # activan por conexión. Sin esto, los tests correrían sin enforcement de FK.
+    @event.listens_for(engine, "connect")
+    def _fk_on(dbapi_conn, _):
+        dbapi_conn.execute("PRAGMA foreign_keys = ON")
+
     TestSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
 

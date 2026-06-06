@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_session
@@ -25,7 +26,11 @@ def list_routine_exercises(db: Session = Depends(get_session)):
 def create_routine_exercise(data: RoutineExerciseCreate, db: Session = Depends(get_session)):
     re = RoutineExercise(**data.model_dump())
     db.add(re)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="routine_id or exercise_id does not exist")
     db.refresh(re)
     return re
 
@@ -50,7 +55,11 @@ def list_sessions(db: Session = Depends(get_session)):
 def create_session(data: SessionCreate, db: Session = Depends(get_session)):
     s = WorkoutSession(**data.model_dump())
     db.add(s)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="routine_id does not exist")
     db.refresh(s)
     return s
 
@@ -81,7 +90,11 @@ def list_sets(session_id: int, db: Session = Depends(get_session)):
 def create_set(data: SetCreate, db: Session = Depends(get_session)):
     s = WorkoutSet(**data.model_dump())
     db.add(s)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="session_id or exercise_id does not exist")
     db.refresh(s)
     return s
 

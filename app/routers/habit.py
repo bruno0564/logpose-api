@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_session
@@ -58,7 +59,11 @@ def list_habits(db: Session = Depends(get_session)):
 def create_habit(data: HabitCreate, db: Session = Depends(get_session)):
     habit = Habit(**data.model_dump())
     db.add(habit)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="category_id does not exist")
     db.refresh(habit)
     return habit
 
@@ -104,7 +109,11 @@ def create_log(data: HabitLogCreate, db: Session = Depends(get_session)):
         return existing
     log = HabitLog(**data.model_dump())
     db.add(log)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="habit_id does not exist")
     db.refresh(log)
     return log
 

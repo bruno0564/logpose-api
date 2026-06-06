@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_session
@@ -42,7 +43,11 @@ def list_items(list_id: int, db: Session = Depends(get_session)):
 def create_item(data: TaskItemCreate, db: Session = Depends(get_session)):
     item = TaskItem(**data.model_dump())
     db.add(item)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="list_id does not exist")
     db.refresh(item)
     return item
 
