@@ -7,7 +7,7 @@ DAYS_OF_WEEK_PATTERN = r'^[0-6](,[0-6])*$'
 
 
 class CalendarEventCreate(BaseModel):
-    title: str
+    title: str = Field(min_length=1)
     date: str | None = None
     start_time: str | None = None
     end_time: str | None = None
