@@ -113,6 +113,15 @@ def create_log(data: HabitLogCreate, db: Session = Depends(get_session)):
         db.commit()
     except IntegrityError:
         db.rollback()
+        # Puede ser una carrera (otra petición insertó el mismo habit+día entre el
+        # check y el commit, violando el UniqueConstraint) o un habit_id inexistente
+        # (violación de FK). En el primer caso mantenemos la idempotencia.
+        existing = db.query(HabitLog).filter(
+            HabitLog.habit_id == data.habit_id,
+            HabitLog.date == data.date,
+        ).first()
+        if existing:
+            return existing
         raise HTTPException(status_code=400, detail="habit_id does not exist")
     db.refresh(log)
     return log
