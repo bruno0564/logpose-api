@@ -62,6 +62,7 @@ def _ensure_column(table: str, column: str, ddl: str):
         )
 
 
+_ensure_column("exercises", "muscle_subgroup", "muscle_subgroup TEXT")
 _ensure_column("exercises", "is_unilateral", "is_unilateral INTEGER NOT NULL DEFAULT 0")
 _ensure_column("workout_sets", "side", "side TEXT NOT NULL DEFAULT 'both'")
 
