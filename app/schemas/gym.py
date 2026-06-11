@@ -16,6 +16,11 @@ class RoutineExerciseRead(RoutineExerciseCreate):
     model_config = {"from_attributes": True}
 
 
+class RoutineExerciseUpdate(BaseModel):
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    position:    int | None = None
+
+
 class SessionCreate(BaseModel):
     routine_id:  int | None = None
     day_of_week: int | None = Field(default=None, ge=0, le=6)

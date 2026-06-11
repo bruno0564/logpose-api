@@ -7,7 +7,7 @@ from app.models.routine_exercise import RoutineExercise
 from app.models.workout_session import WorkoutSession
 from app.models.workout_set import WorkoutSet
 from app.schemas.gym import (
-    RoutineExerciseCreate, RoutineExerciseRead,
+    RoutineExerciseCreate, RoutineExerciseRead, RoutineExerciseUpdate,
     SessionCreate, SessionRead,
     SetCreate, SetRead,
 )
@@ -31,6 +31,18 @@ def create_routine_exercise(data: RoutineExerciseCreate, db: Session = Depends(g
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="routine_id or exercise_id does not exist")
+    db.refresh(re)
+    return re
+
+
+@router.patch("/routine-exercises/{re_id}", response_model=RoutineExerciseRead)
+def update_routine_exercise(re_id: int, data: RoutineExerciseUpdate, db: Session = Depends(get_session)):
+    re = db.get(RoutineExercise, re_id)
+    if not re:
+        raise HTTPException(status_code=404, detail="RoutineExercise not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(re, field, value)
+    db.commit()
     db.refresh(re)
     return re
 
