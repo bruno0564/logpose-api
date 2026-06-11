@@ -66,6 +66,31 @@ _ensure_column("exercises", "muscle_subgroup", "muscle_subgroup TEXT")
 _ensure_column("exercises", "is_unilateral", "is_unilateral INTEGER NOT NULL DEFAULT 0")
 _ensure_column("workout_sets", "side", "side TEXT NOT NULL DEFAULT 'both'")
 
+
+# La tabla habits de instalaciones antiguas se creó con una columna `goal` (ya
+# eliminada del modelo) y sin `days_of_week`. Como create_all no migra, la tabla
+# quedaba incompatible con el modelo: GET /habits/ daba 500 (selecciona una
+# columna inexistente) y los POST fallaban (goal NOT NULL sin default), lo que
+# rompía toda la sincronización de hábitos. Reparamos el esquema en arranque.
+_ensure_column("habits", "days_of_week", "days_of_week VARCHAR NOT NULL DEFAULT '0,1,2,3,4,5,6'")
+
+
+def _drop_column(table: str, column: str):
+    # SQLite 3.35+ soporta DROP COLUMN. Solo lo intentamos si la columna existe,
+    # para que sea idempotente y no rompa el arranque en instalaciones ya migradas.
+    try:
+        with engine.begin() as conn:
+            cols = [row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))]
+            if column in cols:
+                conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {column}"))
+    except OperationalError as e:
+        logging.getLogger("uvicorn.error").warning(
+            "No se pudo eliminar la columna %s.%s: %s", table, column, e
+        )
+
+
+_drop_column("habits", "goal")
+
 app = FastAPI(title="Logpose API")
 
 app.add_middleware(
