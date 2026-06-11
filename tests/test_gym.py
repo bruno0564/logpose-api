@@ -62,9 +62,23 @@ class TestExercises:
 
     def test_schema_completo_ejercicio(self, client):
         data = client.post("/exercises/", json=VALID_EXERCISE).json()
-        assert set(data.keys()) == {"id", "name", "muscle_group", "muscle_subgroup"}
+        assert set(data.keys()) == {"id", "name", "muscle_group", "muscle_subgroup", "is_unilateral"}
         assert isinstance(data["id"], int)
         assert isinstance(data["name"], str)
+
+    def test_ejercicio_bilateral_por_defecto(self, client):
+        data = client.post("/exercises/", json={"name": "Press banca"}).json()
+        assert data["is_unilateral"] is False
+
+    def test_crear_ejercicio_unilateral(self, client):
+        data = client.post("/exercises/", json={"name": "Remo a una mano", "is_unilateral": True}).json()
+        assert data["is_unilateral"] is True
+
+    def test_renombrar_conserva_unilateral(self, client):
+        ex_id = client.post("/exercises/", json={"name": "Remo a una mano", "is_unilateral": True}).json()["id"]
+        r = client.put(f"/exercises/{ex_id}", json={"name": "Remo mancuerna", "is_unilateral": True})
+        assert r.status_code == 200
+        assert r.json()["is_unilateral"] is True
 
     def test_lista_ordenada_por_nombre(self, client):
         client.post("/exercises/", json={"name": "Sentadilla"})
@@ -345,7 +359,33 @@ class TestSets:
         ex_id = create_exercise(client)["id"]
         s_id  = create_session(client)["id"]
         data  = create_set(client, s_id, ex_id)
-        assert set(data.keys()) == {"id", "session_id", "exercise_id", "set_number", "weight", "reps", "note"}
+        assert set(data.keys()) == {"id", "session_id", "exercise_id", "set_number", "weight", "reps", "note", "side"}
+
+    def test_set_bilateral_por_defecto(self, client):
+        ex_id = create_exercise(client)["id"]
+        s_id  = create_session(client)["id"]
+        data  = create_set(client, s_id, ex_id)
+        assert data["side"] == "both"
+
+    def test_crear_sets_por_lado(self, client):
+        ex_id = create_exercise(client)["id"]
+        s_id  = create_session(client)["id"]
+        for side in ("left", "right"):
+            r = client.post("/gym/sets/", json={
+                "session_id": s_id, "exercise_id": ex_id,
+                "set_number": 1, "weight": 20.0, "reps": 10, "side": side,
+            })
+            assert r.status_code == 201
+            assert r.json()["side"] == side
+
+    def test_crear_set_side_invalido(self, client):
+        ex_id = create_exercise(client)["id"]
+        s_id  = create_session(client)["id"]
+        r = client.post("/gym/sets/", json={
+            "session_id": s_id, "exercise_id": ex_id,
+            "set_number": 1, "weight": 20.0, "reps": 10, "side": "middle",
+        })
+        assert r.status_code == 422
 
     def test_sets_aparecen_bajo_su_sesion(self, client):
         ex_id = create_exercise(client)["id"]

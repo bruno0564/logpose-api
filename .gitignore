@@ -16,6 +16,9 @@ build/
 *.sqlite
 *.sqlite3
 
+# Imágenes subidas del journal (bytes en disco, no en git)
+uploads/
+
 # Variables de entorno
 .env
 .env.local

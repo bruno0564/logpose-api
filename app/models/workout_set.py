@@ -13,3 +13,6 @@ class WorkoutSet(Base):
     weight:      Mapped[float]    = mapped_column(Float, nullable=False)
     reps:        Mapped[int]      = mapped_column(Integer, nullable=False)
     note:        Mapped[str|None] = mapped_column(String, nullable=True)
+    # Lado trabajado: "both" (bilateral, por defecto) | "left" | "right".
+    # Un ejercicio unilateral guarda dos filas por serie (una por lado).
+    side:        Mapped[str]      = mapped_column(String, nullable=False, default="both")

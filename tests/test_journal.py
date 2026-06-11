@@ -200,3 +200,101 @@ class TestEscenarioCompleto:
         r = client.post("/journal/", json={"date": "2026-05-19", "content": "Segunda escritura"})
         assert r.status_code != 201
         assert len(client.get("/journal/").json()) == 1
+
+
+# ── Imágenes del journal ────────────────────────────────────────────────────────
+
+import base64
+
+# PNG 1x1 transparente, mínimo válido.
+_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgYAAA"
+    "AAMAASsJTYQAAAAASUVORK5CYII="
+)
+
+
+@pytest.fixture
+def img_client(client, tmp_path, monkeypatch):
+    """Cliente con el directorio de uploads apuntando a un tmp aislado."""
+    monkeypatch.setattr("app.routers.journal.UPLOAD_DIR", tmp_path)
+    return client
+
+
+def upload_image(client, date="2026-05-19", position=0, caption=None, content_type="image/png"):
+    data = {"date": date, "position": str(position)}
+    if caption is not None:
+        data["caption"] = caption
+    return client.post(
+        "/journal/images/",
+        data=data,
+        files={"file": ("foto.png", _PNG, content_type)},
+    )
+
+
+class TestJournalImages:
+    def test_lista_vacia(self, img_client):
+        r = img_client.get("/journal/images/")
+        assert r.status_code == 200
+        assert r.json() == []
+
+    def test_subir_imagen(self, img_client):
+        r = upload_image(img_client)
+        assert r.status_code == 201
+        data = r.json()
+        assert data["date"] == "2026-05-19"
+        assert data["content_type"] == "image/png"
+        assert data["position"] == 0
+        assert "id" in data
+        # filename es interno: no se expone en la respuesta
+        assert "filename" not in data
+
+    def test_subir_con_caption_y_posicion(self, img_client):
+        data = upload_image(img_client, position=2, caption="Atardecer").json()
+        assert data["position"] == 2
+        assert data["caption"] == "Atardecer"
+
+    def test_imagen_aparece_en_la_lista(self, img_client):
+        upload_image(img_client)
+        r = img_client.get("/journal/images/")
+        assert len(r.json()) == 1
+
+    def test_descargar_bytes(self, img_client):
+        img_id = upload_image(img_client).json()["id"]
+        r = img_client.get(f"/journal/images/{img_id}/file")
+        assert r.status_code == 200
+        assert r.content == _PNG
+        assert r.headers["content-type"] == "image/png"
+
+    def test_rechaza_no_imagen(self, img_client):
+        r = img_client.post(
+            "/journal/images/",
+            data={"date": "2026-05-19"},
+            files={"file": ("notas.txt", b"hola", "text/plain")},
+        )
+        assert r.status_code == 400
+
+    def test_rechaza_fecha_invalida(self, img_client):
+        r = img_client.post(
+            "/journal/images/",
+            data={"date": "2026-13-45"},
+            files={"file": ("foto.png", _PNG, "image/png")},
+        )
+        assert r.status_code == 422
+
+    def test_borrar_imagen(self, img_client):
+        img_id = upload_image(img_client).json()["id"]
+        assert img_client.delete(f"/journal/images/{img_id}").status_code == 204
+        assert img_client.get("/journal/images/").json() == []
+        assert img_client.get(f"/journal/images/{img_id}/file").status_code == 404
+
+    def test_borrar_inexistente(self, img_client):
+        assert img_client.delete("/journal/images/9999").status_code == 404
+
+    def test_descargar_inexistente(self, img_client):
+        assert img_client.get("/journal/images/9999/file").status_code == 404
+
+    def test_ordenadas_por_fecha_desc_y_posicion(self, img_client):
+        upload_image(img_client, date="2026-05-18", position=1)
+        upload_image(img_client, date="2026-05-19", position=0)
+        dates = [i["date"] for i in img_client.get("/journal/images/").json()]
+        assert dates == ["2026-05-19", "2026-05-18"]

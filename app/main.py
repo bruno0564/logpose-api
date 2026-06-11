@@ -19,6 +19,7 @@ from app.models.workout_session import WorkoutSession
 from app.models.workout_set import WorkoutSet
 from app.models.calendar_event import CalendarEvent
 from app.models.journal_entry import JournalEntry
+from app.models.journal_image import JournalImage
 from app.models.habit import HabitCategory, Habit, HabitLog
 
 Base.metadata.create_all(bind=engine)
@@ -43,6 +44,26 @@ def _ensure_habit_log_unique_index():
 
 
 _ensure_habit_log_unique_index()
+
+
+# Migración idempotente de columnas nuevas: create_all no hace ALTER sobre tablas
+# ya existentes, así que para las columnas añadidas a exercises/workout_sets las
+# agregamos a mano si faltan. SQLite no soporta "ADD COLUMN IF NOT EXISTS", de modo
+# que comprobamos antes con PRAGMA table_info.
+def _ensure_column(table: str, column: str, ddl: str):
+    try:
+        with engine.begin() as conn:
+            cols = [row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))]
+            if column not in cols:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+    except OperationalError as e:
+        logging.getLogger("uvicorn.error").warning(
+            "No se pudo añadir la columna %s.%s: %s", table, column, e
+        )
+
+
+_ensure_column("exercises", "is_unilateral", "is_unilateral INTEGER NOT NULL DEFAULT 0")
+_ensure_column("workout_sets", "side", "side TEXT NOT NULL DEFAULT 'both'")
 
 app = FastAPI(title="Logpose API")
 

@@ -32,6 +32,7 @@ def update_exercise(exercise_id: int, data: ExerciseUpdate, db: Session = Depend
     ex.name = data.name
     ex.muscle_group = data.muscle_group
     ex.muscle_subgroup = data.muscle_subgroup
+    ex.is_unilateral = data.is_unilateral
     db.commit()
     db.refresh(ex)
     return ex

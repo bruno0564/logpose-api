@@ -24,3 +24,13 @@ class JournalEntryRead(BaseModel):
     content: str
 
     model_config = {"from_attributes": True}
+
+
+class JournalImageRead(BaseModel):
+    id: int
+    date: str
+    content_type: str
+    position: int
+    caption: str | None = None
+
+    model_config = {"from_attributes": True}

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -34,6 +36,7 @@ class SetCreate(BaseModel):
     weight:      float = Field(ge=0)   # 0 es válido: ejercicios de peso corporal
     reps:        int   = Field(ge=1)
     note:        str | None = None
+    side:        Literal["both", "left", "right"] = "both"
 
 
 class SetRead(SetCreate):
