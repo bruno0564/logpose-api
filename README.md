@@ -12,7 +12,7 @@ A REST API that acts as the sync layer for the desktop and mobile apps. The apps
 - **SQLAlchemy 2.x** with the new `Mapped` / `mapped_column` API
 - **SQLite** (local database, no external dependencies)
 - **Pydantic v2** (schema validation)
-- **pytest** + **httpx** (220 integration tests)
+- **pytest** + **httpx** (269 integration tests)
 
 ## Modules
 
@@ -26,6 +26,7 @@ A REST API that acts as the sync layer for the desktop and mobile apps. The apps
 | Tasks | `/tasks/lists` `/tasks/items` | Task lists with items and completed state |
 | Journal | `/journal/` | Daily entry — one per day, with duplicate detection (409) |
 | Quotes | `/quotes/` | Motivational quotes with optional author |
+| Habits | `/habits/categories` `/habits/` `/habits/logs` | Habits grouped by colour category, with per-weekday scheduling and daily completion logs |
 
 All modules implement full CRUD with cascading deletes where appropriate (deleting a routine clears its sessions and sets; deleting an exercise clears its routine_exercises and sets).
 
@@ -48,7 +49,7 @@ Each record in the apps has three control fields: `server_id` (id on the server,
 pytest
 ```
 
-220 integration tests organised by module. Each test uses an isolated in-memory SQLite database (the `client` fixture in `conftest.py`). They cover equivalence partitions, boundary values and full end-to-end scenarios (complete CRUD flow).
+269 integration tests organised by module. Each test uses an isolated in-memory SQLite database (the `client` fixture in `conftest.py`). They cover equivalence partitions, boundary values and full end-to-end scenarios (complete CRUD flow).
 
 ## Structure
 
