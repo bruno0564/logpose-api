@@ -251,7 +251,38 @@ class TestRoutineExercises:
         data = client.post("/gym/routine-exercises/", json={
             "routine_id": r_id, "exercise_id": ex_id, "day_of_week": 1, "position": 0
         }).json()
-        assert set(data.keys()) == {"id", "routine_id", "exercise_id", "day_of_week", "position"}
+        assert set(data.keys()) == {"id", "routine_id", "exercise_id", "day_of_week", "position", "target_sets"}
+
+    def test_target_sets_por_defecto(self, client):
+        ex_id = create_exercise(client)["id"]
+        r_id  = create_routine(client)["id"]
+        data  = create_routine_exercise(client, r_id, ex_id)
+        assert data["target_sets"] == 3
+
+    def test_crear_routine_exercise_con_target_sets(self, client):
+        ex_id = create_exercise(client)["id"]
+        r_id  = create_routine(client)["id"]
+        data  = client.post("/gym/routine-exercises/", json={
+            "routine_id": r_id, "exercise_id": ex_id, "day_of_week": 0, "target_sets": 5,
+        }).json()
+        assert data["target_sets"] == 5
+
+    def test_actualizar_target_sets(self, client):
+        ex_id = create_exercise(client)["id"]
+        r_id  = create_routine(client)["id"]
+        re_id = create_routine_exercise(client, r_id, ex_id)["id"]
+        r = client.patch(f"/gym/routine-exercises/{re_id}", json={"target_sets": 4})
+        assert r.status_code == 200
+        assert r.json()["target_sets"] == 4
+
+    @pytest.mark.parametrize("bad", [0, 21, -1])
+    def test_target_sets_fuera_de_rango(self, client, bad):
+        ex_id = create_exercise(client)["id"]
+        r_id  = create_routine(client)["id"]
+        r = client.post("/gym/routine-exercises/", json={
+            "routine_id": r_id, "exercise_id": ex_id, "day_of_week": 0, "target_sets": bad,
+        })
+        assert r.status_code == 422
 
     @pytest.mark.parametrize("payload", [
         {"exercise_id": 1, "day_of_week": 0, "position": 0},   # falta routine_id
@@ -420,6 +451,56 @@ class TestSets:
 
     def test_borrar_set_inexistente(self, client):
         assert client.delete("/gym/sets/9999").status_code == 404
+
+
+# ── Última vez / sobrecarga progresiva ─────────────────────────────────────────
+
+class TestLastPerformance:
+    def test_sin_historial_devuelve_null(self, client):
+        ex_id = create_exercise(client)["id"]
+        r = client.get(f"/gym/exercises/{ex_id}/last-performance")
+        assert r.status_code == 200
+        assert r.json() is None
+
+    def test_devuelve_sesion_mas_reciente(self, client):
+        ex_id = create_exercise(client)["id"]
+        s_old = create_session(client, date="2026-05-10")["id"]
+        s_new = create_session(client, date="2026-05-17")["id"]
+        create_set(client, s_old, ex_id, set_number=1, weight=80.0, reps=8)
+        create_set(client, s_new, ex_id, set_number=1, weight=85.0, reps=8)
+        data = client.get(f"/gym/exercises/{ex_id}/last-performance").json()
+        assert data["session_id"] == s_new
+        assert data["date"] == "2026-05-17"
+        assert len(data["sets"]) == 1
+        assert data["sets"][0]["weight"] == 85.0
+
+    def test_solo_series_de_ese_ejercicio(self, client):
+        ex1 = create_exercise(client, name="Press")["id"]
+        ex2 = create_exercise(client, name="Remo")["id"]
+        s_id = create_session(client, date="2026-05-17")["id"]
+        create_set(client, s_id, ex1, set_number=1, weight=80.0, reps=8)
+        create_set(client, s_id, ex2, set_number=1, weight=60.0, reps=10)
+        data = client.get(f"/gym/exercises/{ex1}/last-performance").json()
+        assert len(data["sets"]) == 1
+        assert data["sets"][0]["exercise_id"] == ex1
+
+    def test_before_excluye_sesion_actual(self, client):
+        ex_id = create_exercise(client)["id"]
+        s_prev = create_session(client, date="2026-05-10")["id"]
+        s_today = create_session(client, date="2026-05-17")["id"]
+        create_set(client, s_prev, ex_id, set_number=1, weight=80.0, reps=8)
+        create_set(client, s_today, ex_id, set_number=1, weight=85.0, reps=8)
+        data = client.get(f"/gym/exercises/{ex_id}/last-performance?before=2026-05-17").json()
+        assert data["session_id"] == s_prev
+        assert data["sets"][0]["weight"] == 80.0
+
+    def test_devuelve_varias_series_ordenadas(self, client):
+        ex_id = create_exercise(client)["id"]
+        s_id = create_session(client, date="2026-05-17")["id"]
+        create_set(client, s_id, ex_id, set_number=2, weight=82.0, reps=7)
+        create_set(client, s_id, ex_id, set_number=1, weight=80.0, reps=8)
+        data = client.get(f"/gym/exercises/{ex_id}/last-performance").json()
+        assert [s["set_number"] for s in data["sets"]] == [1, 2]
 
 
 # ── Escenario completo (S08) ───────────────────────────────────────────────────
