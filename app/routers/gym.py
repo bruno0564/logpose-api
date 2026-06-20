@@ -10,6 +10,7 @@ from app.schemas.gym import (
     RoutineExerciseCreate, RoutineExerciseRead, RoutineExerciseUpdate,
     SessionCreate, SessionRead,
     SetCreate, SetRead,
+    LastPerformanceRead,
 )
 
 router = APIRouter(prefix="/gym", tags=["gym"])
@@ -96,6 +97,33 @@ def list_all_sets(db: Session = Depends(get_session)):
 @router.get("/sessions/{session_id}/sets/", response_model=list[SetRead])
 def list_sets(session_id: int, db: Session = Depends(get_session)):
     return db.query(WorkoutSet).filter(WorkoutSet.session_id == session_id).all()
+
+
+@router.get("/exercises/{exercise_id}/last-performance", response_model=LastPerformanceRead | None)
+def last_performance(exercise_id: int, before: str | None = None, db: Session = Depends(get_session)):
+    """Devuelve las series del entreno previo más reciente que incluya este ejercicio.
+
+    Sirve de referencia para la sobrecarga progresiva: "lo que hiciste la última vez".
+    Con `before` (YYYY-MM-DD) se ignoran las sesiones de esa fecha o posteriores, para
+    que durante un entreno de hoy se vea el anterior y no el que estás registrando.
+    """
+    q = (
+        db.query(WorkoutSession)
+        .join(WorkoutSet, WorkoutSet.session_id == WorkoutSession.id)
+        .filter(WorkoutSet.exercise_id == exercise_id)
+    )
+    if before:
+        q = q.filter(WorkoutSession.date < before)
+    session = q.order_by(WorkoutSession.date.desc(), WorkoutSession.id.desc()).first()
+    if not session:
+        return None
+    sets = (
+        db.query(WorkoutSet)
+        .filter(WorkoutSet.session_id == session.id, WorkoutSet.exercise_id == exercise_id)
+        .order_by(WorkoutSet.set_number, WorkoutSet.side)
+        .all()
+    )
+    return LastPerformanceRead(session_id=session.id, date=session.date, sets=sets)
 
 
 @router.post("/sets/", response_model=SetRead, status_code=201)

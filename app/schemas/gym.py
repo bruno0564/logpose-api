@@ -8,6 +8,7 @@ class RoutineExerciseCreate(BaseModel):
     day_of_week: int = Field(ge=0, le=6)
     exercise_id: int
     position:    int = 0
+    target_sets: int = Field(default=3, ge=1, le=20)
 
 
 class RoutineExerciseRead(RoutineExerciseCreate):
@@ -19,6 +20,7 @@ class RoutineExerciseRead(RoutineExerciseCreate):
 class RoutineExerciseUpdate(BaseModel):
     day_of_week: int | None = Field(default=None, ge=0, le=6)
     position:    int | None = None
+    target_sets: int | None = Field(default=None, ge=1, le=20)
 
 
 class SessionCreate(BaseModel):
@@ -48,3 +50,10 @@ class SetRead(SetCreate):
     id: int
 
     model_config = {"from_attributes": True}
+
+
+class LastPerformanceRead(BaseModel):
+    """Series del entreno previo más reciente para un ejercicio (sobrecarga progresiva)."""
+    session_id: int
+    date:       str
+    sets:       list[SetRead]

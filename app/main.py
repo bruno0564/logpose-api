@@ -65,6 +65,7 @@ def _ensure_column(table: str, column: str, ddl: str):
 _ensure_column("exercises", "muscle_subgroup", "muscle_subgroup TEXT")
 _ensure_column("exercises", "is_unilateral", "is_unilateral INTEGER NOT NULL DEFAULT 0")
 _ensure_column("workout_sets", "side", "side TEXT NOT NULL DEFAULT 'both'")
+_ensure_column("routine_exercises", "target_sets", "target_sets INTEGER NOT NULL DEFAULT 3")
 
 
 # La tabla habits de instalaciones antiguas se creó con una columna `goal` (ya
