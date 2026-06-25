@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.database import engine, Base
-from app.routers import body_weight, task, quote, routine, exercise, gym, calendar_event, journal, habit
+from app.routers import body_weight, task, quote, routine, exercise, gym, calendar_event, journal, habit, countdown
 
 from app.models import body_weight as _bw
 from app.models import quote as _q
@@ -21,6 +21,7 @@ from app.models.calendar_event import CalendarEvent
 from app.models.journal_entry import JournalEntry
 from app.models.journal_image import JournalImage
 from app.models.habit import HabitCategory, Habit, HabitLog
+from app.models.countdown import Countdown
 
 Base.metadata.create_all(bind=engine)
 
@@ -110,6 +111,7 @@ app.include_router(gym.router)
 app.include_router(calendar_event.router)
 app.include_router(journal.router)
 app.include_router(habit.router)
+app.include_router(countdown.router)
 
 
 @app.get("/")
