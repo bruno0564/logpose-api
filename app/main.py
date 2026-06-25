@@ -75,6 +75,7 @@ _ensure_column("routine_exercises", "target_sets", "target_sets INTEGER NOT NULL
 # columna inexistente) y los POST fallaban (goal NOT NULL sin default), lo que
 # rompía toda la sincronización de hábitos. Reparamos el esquema en arranque.
 _ensure_column("habits", "days_of_week", "days_of_week VARCHAR NOT NULL DEFAULT '0,1,2,3,4,5,6'")
+_ensure_column("habits", "reminder_time", "reminder_time TEXT")
 
 
 def _drop_column(table: str, column: str):

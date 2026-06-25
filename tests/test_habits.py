@@ -131,7 +131,44 @@ class TestHabits:
     def test_schema_completo_habito(self, client):
         cat_id = create_category(client)["id"]
         data = create_habit(client, cat_id)
-        assert set(data.keys()) == {"id", "category_id", "name", "days_of_week", "position"}
+        assert set(data.keys()) == {"id", "category_id", "name", "days_of_week", "position", "reminder_time"}
+
+    def test_crear_habito_sin_recordatorio_por_defecto(self, client):
+        cat_id = create_category(client)["id"]
+        assert create_habit(client, cat_id)["reminder_time"] is None
+
+    def test_crear_habito_con_recordatorio(self, client):
+        cat_id = create_category(client)["id"]
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "Meditar", "reminder_time": "08:30"})
+        assert r.status_code == 201
+        assert r.json()["reminder_time"] == "08:30"
+
+    @pytest.mark.parametrize("hora", ["00:00", "23:59", "09:05"])
+    def test_recordatorio_horas_validas(self, client, hora):
+        cat_id = create_category(client)["id"]
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "X", "reminder_time": hora})
+        assert r.status_code == 201
+        assert r.json()["reminder_time"] == hora
+
+    @pytest.mark.parametrize("hora", ["24:00", "12:60", "8:30", "0830", "08:5", "abc", "08:30:00"])
+    def test_recordatorio_horas_invalidas(self, client, hora):
+        cat_id = create_category(client)["id"]
+        r = client.post("/habits/", json={"category_id": cat_id, "name": "X", "reminder_time": hora})
+        assert r.status_code == 422
+
+    def test_actualizar_recordatorio(self, client):
+        cat_id = create_category(client)["id"]
+        hab_id = create_habit(client, cat_id, reminder_time="08:00")["id"]
+        r = client.put(f"/habits/{hab_id}", json={"name": "Leer", "days_of_week": "0,1,2", "position": 0, "reminder_time": "21:15"})
+        assert r.status_code == 200
+        assert r.json()["reminder_time"] == "21:15"
+
+    def test_quitar_recordatorio(self, client):
+        cat_id = create_category(client)["id"]
+        hab_id = create_habit(client, cat_id, reminder_time="08:00")["id"]
+        r = client.put(f"/habits/{hab_id}", json={"name": "Leer", "days_of_week": "0,1,2", "position": 0})
+        assert r.status_code == 200
+        assert r.json()["reminder_time"] is None
 
     def test_crear_habito_tres_dias_semana(self, client):
         cat_id = create_category(client)["id"]

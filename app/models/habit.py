@@ -17,6 +17,9 @@ class Habit(Base):
     name:         Mapped[str] = mapped_column(String, nullable=False)
     days_of_week: Mapped[str] = mapped_column(String, nullable=False, default="0,1,2,3,4,5,6")
     position:     Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Hora de recordatorio 'HH:MM' (null = sin recordatorio). Las notificaciones
+    # las programa el cliente móvil en local usando days_of_week.
+    reminder_time: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class HabitLog(Base):
