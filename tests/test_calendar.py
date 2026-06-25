@@ -66,7 +66,7 @@ class TestListEvents:
     def test_schema_de_evento(self, client):
         create_event(client, **VALID_EVENT)
         data = client.get("/calendar/").json()[0]
-        expected_keys = {"id", "title", "date", "start_time", "end_time", "recurrence", "days_of_week", "notes", "color"}
+        expected_keys = {"id", "title", "date", "start_time", "end_time", "recurrence", "days_of_week", "notes", "color", "reminder_minutes"}
         assert set(data.keys()) == expected_keys
         assert isinstance(data["id"], int)
         assert isinstance(data["title"], str)
@@ -135,6 +135,20 @@ class TestCreateEvent:
         r = client.post("/calendar/", json={"title": "X", "recurrence": recurrence})
         assert r.status_code == 422
 
+    def test_evento_sin_recordatorio_por_defecto(self, client):
+        assert create_event(client)["reminder_minutes"] is None
+
+    @pytest.mark.parametrize("minutos", [0, 10, 30, 60, 1440])
+    def test_recordatorios_validos(self, client, minutos):
+        r = client.post("/calendar/", json={"title": "X", "recurrence": "none", "start_time": "10:00", "reminder_minutes": minutos})
+        assert r.status_code == 201
+        assert r.json()["reminder_minutes"] == minutos
+
+    @pytest.mark.parametrize("minutos", [5, 15, 45, 120, -10, 90])
+    def test_recordatorios_invalidos(self, client, minutos):
+        r = client.post("/calendar/", json={"title": "X", "recurrence": "none", "reminder_minutes": minutos})
+        assert r.status_code == 422
+
 
 # ── PUT /calendar/{event_id} ───────────────────────────────────────────────────
 
@@ -164,8 +178,20 @@ class TestUpdateEvent:
     def test_schema_de_respuesta(self, client):
         ev = create_event(client)
         data = client.put(f"/calendar/{ev['id']}", json={"title": "T", "recurrence": "none"}).json()
-        expected_keys = {"id", "title", "date", "start_time", "end_time", "recurrence", "days_of_week", "notes", "color"}
+        expected_keys = {"id", "title", "date", "start_time", "end_time", "recurrence", "days_of_week", "notes", "color", "reminder_minutes"}
         assert set(data.keys()) == expected_keys
+
+    def test_actualizar_recordatorio(self, client):
+        ev = create_event(client, start_time="09:00", reminder_minutes=10)
+        r = client.put(f"/calendar/{ev['id']}", json={"title": "Evento", "recurrence": "none", "start_time": "09:00", "reminder_minutes": 60})
+        assert r.status_code == 200
+        assert r.json()["reminder_minutes"] == 60
+
+    def test_quitar_recordatorio(self, client):
+        ev = create_event(client, start_time="09:00", reminder_minutes=30)
+        r = client.put(f"/calendar/{ev['id']}", json={"title": "Evento", "recurrence": "none", "start_time": "09:00"})
+        assert r.status_code == 200
+        assert r.json()["reminder_minutes"] is None
 
     def test_id_no_cambia_tras_actualizar(self, client):
         ev = create_event(client)

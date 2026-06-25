@@ -76,6 +76,7 @@ _ensure_column("routine_exercises", "target_sets", "target_sets INTEGER NOT NULL
 # rompía toda la sincronización de hábitos. Reparamos el esquema en arranque.
 _ensure_column("habits", "days_of_week", "days_of_week VARCHAR NOT NULL DEFAULT '0,1,2,3,4,5,6'")
 _ensure_column("habits", "reminder_time", "reminder_time TEXT")
+_ensure_column("calendar_events", "reminder_minutes", "reminder_minutes INTEGER")
 
 
 def _drop_column(table: str, column: str):

@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -14,3 +14,6 @@ class CalendarEvent(Base):
     days_of_week: Mapped[str | None] = mapped_column(String, nullable=True)  # "0,2,4"
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
     color: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Minutos de antelación del aviso respecto a start_time (0 = a la hora,
+    # null = sin recordatorio). Las notificaciones las programa el móvil.
+    reminder_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)

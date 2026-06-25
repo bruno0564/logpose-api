@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field
 # Habit. None se admite (eventos sin recurrencia por días concretos).
 DAYS_OF_WEEK_PATTERN = r'^[0-6](,[0-6])*$'
 
+# Antelación del aviso en minutos antes del inicio. Opciones fijas que ofrece la
+# app: a la hora (0), 10 min, 30 min, 1 hora y 1 día. None = sin recordatorio.
+ReminderMinutes = Literal[0, 10, 30, 60, 1440]
+
 
 class CalendarEventCreate(BaseModel):
     title: str = Field(min_length=1)
@@ -15,6 +19,7 @@ class CalendarEventCreate(BaseModel):
     days_of_week: str | None = Field(default=None, pattern=DAYS_OF_WEEK_PATTERN)
     notes: str | None = None
     color: str | None = None
+    reminder_minutes: ReminderMinutes | None = None
 
 
 class CalendarEventUpdate(CalendarEventCreate):
